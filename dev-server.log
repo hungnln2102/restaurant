@@ -1,0 +1,26 @@
+
+> restaurant-management-ui@0.1.0 dev
+> vite --host 127.0.0.1 --port 4173
+
+
+  [32m[1mVITE[22m v7.3.2[39m  [2mready in [0m[1m325[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m4173[22m/[39m
+[2m9:28:23 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mindex.html[22m
+[2m9:32:42 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m9:32:51 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m9:33:10 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m9:33:18 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m9:34:26 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/shared/layout/AppShell.jsx[22m
+[2m9:39:55 PM[22m [36m[1m[vite][22m[39m [32m.env changed, restarting server...[39m
+[2m9:39:55 PM[22m [36m[1m[vite][22m[39m server restarted.
+[2m9:39:58 PM[22m [36m[1m[vite][22m[39m [32m.env changed, restarting server...[39m
+[2m9:39:58 PM[22m [36m[1m[vite][22m[39m server restarted.
+[2m9:43:36 PM[22m [36m[1m[vite][22m[39m [32m.env changed, restarting server...[39m
+[2m9:43:36 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Re-optimizing dependencies because lockfile has changed
+[2m9:43:36 PM[22m [36m[1m[vite][22m[39m server restarted.
+[2m10:13:58 PM[22m [36m[1m[vite][22m[39m [32mvite.config.js changed, restarting server...[39m
+[2m10:13:58 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Re-optimizing dependencies because lockfile has changed
+[2m10:13:58 PM[22m [36m[1m[vite][22m[39m server restarted.
+[2m10:20:08 PM[22m [36m[1m[vite][22m[39m [32mvite.config.js changed, restarting server...[39m
+[2m10:20:08 PM[22m [36m[1m[vite][22m[39m server restarted.

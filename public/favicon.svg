@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Restaurant Management">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#214d42" />
+      <stop offset="100%" stop-color="#d77a2d" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="url(#bg)" />
+  <path
+    d="M20 17c1.1 0 2 .9 2 2v13.5c0 2.7-1.8 5-4.2 5.8V47a2 2 0 1 1-4 0v-8.7c-2.4-.8-4.2-3.1-4.2-5.8V19a2 2 0 1 1 4 0v6h2.2v-6a2 2 0 1 1 4 0v6H18v-6c0-1.1.9-2 2-2Zm20.4 0c5.5 0 10 4.7 10 10.6 0 4.4-2.4 8.1-5.8 9.7V47a2 2 0 1 1-4 0V19c0-1.1.9-2 2-2h-2.2Z"
+    fill="#fff6eb"
+  />
+</svg>

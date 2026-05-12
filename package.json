@@ -1,0 +1,28 @@
+{
+  "name": "restaurant-management-ui",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "db:test": "node --env-file=backend/.env backend/scripts/test-db-connection.mjs",
+    "db:schema:inventory": "node --env-file=backend/.env backend/scripts/apply-inventory-schema.mjs",
+    "db:seed:inventory": "node --env-file=backend/.env backend/scripts/seed-inventory-portioning.mjs",
+    "db:seed:product-portioning": "node --env-file=backend/.env backend/scripts/seed-product-portioning.mjs",
+    "db:seed:orders": "node --env-file=backend/.env backend/scripts/seed-product-orders.mjs",
+    "db:seed:orders-fifo": "node --env-file=backend/.env backend/scripts/seed-orders-fifo.mjs"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "pg": "^8.16.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "recharts": "^3.8.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.0",
+    "vite": "^7.0.0"
+  }
+}
