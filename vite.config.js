@@ -23,7 +23,11 @@ import { handleProductSalesPlanRequest } from "./backend/domains/inventory/http/
 import { handleProductOrderRequest } from "./backend/domains/inventory/http/productOrderRoute.mjs";
 import { handleDashboardOverviewRequest } from "./backend/domains/dashboard/http/dashboardRoute.mjs";
 
-process.loadEnvFile?.("backend/.env");
+try {
+  process.loadEnvFile?.("backend/.env");
+} catch {
+  // backend/.env không tồn tại (ví dụ trên Vercel build) — bỏ qua, dùng env injected từ host.
+}
 
 function isJsonBodyMethod(method) {
   return method === "POST" || method === "PUT";
