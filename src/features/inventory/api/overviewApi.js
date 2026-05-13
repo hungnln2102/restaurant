@@ -1,3 +1,29 @@
+function normalizeApiErrorMessage(raw) {
+  if (raw === undefined || raw === null) {
+    return "";
+  }
+  if (typeof raw === "string") {
+    return raw.trim();
+  }
+  if (typeof raw === "object") {
+    const nested =
+      typeof raw.message === "string"
+        ? raw.message
+        : typeof raw.error === "string"
+          ? raw.error
+          : "";
+    if (nested.trim()) {
+      return nested.trim();
+    }
+    try {
+      return JSON.stringify(raw);
+    } catch {
+      return "";
+    }
+  }
+  return String(raw);
+}
+
 function isOverviewDataShape(payload) {
   return (
     payload &&
@@ -28,7 +54,9 @@ async function parseApiResponse(response) {
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(payload?.error || "Không thể tải dữ liệu tồn kho.");
+    const message =
+      normalizeApiErrorMessage(payload?.error) || "Không thể tải dữ liệu tồn kho.";
+    throw new Error(message);
   }
 
   const data = extractOverviewData(payload);
