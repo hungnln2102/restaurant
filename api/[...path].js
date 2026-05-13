@@ -67,6 +67,43 @@ function sendJson(res, status, payload) {
   res.end(JSON.stringify(payload));
 }
 
+/**
+ * Trên Vercel, serverless `api/[...path].js` đôi khi nhận `req.url` không có
+ * tiền tố `/api` (vd: `/dashboard/overview?range=7d`), trong khi Vite dev luôn
+ * thấy `/api/...`. Chuẩn hóa để `detectRoute` và các handler parse query giống
+ * môi trường local.
+ */
+function normalizeApiRequestUrl(rawUrl) {
+  if (typeof rawUrl !== "string") {
+    return "";
+  }
+
+  let pathWithQuery = rawUrl.trim();
+
+  try {
+    if (/^https?:\/\//i.test(pathWithQuery)) {
+      const parsed = new URL(pathWithQuery);
+      pathWithQuery = `${parsed.pathname}${parsed.search}`;
+    }
+  } catch {
+    // giữ nguyên pathWithQuery
+  }
+
+  if (pathWithQuery.startsWith("/api/") || pathWithQuery === "/api") {
+    return pathWithQuery;
+  }
+
+  if (pathWithQuery.startsWith("/")) {
+    return `/api${pathWithQuery}`;
+  }
+
+  if (pathWithQuery.length > 0) {
+    return `/api/${pathWithQuery}`;
+  }
+
+  return "";
+}
+
 function detectRoute(requestUrl) {
   // The lot route is a strict subpath of `/api/inventory/stock-products`,
   // so it MUST be checked first; otherwise the generic stock-products
@@ -136,7 +173,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const requestUrl = req.url ?? "";
+  const requestUrl = normalizeApiRequestUrl(req.url ?? "");
   const route = detectRoute(requestUrl);
 
   if (!route) {
