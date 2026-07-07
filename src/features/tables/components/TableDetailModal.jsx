@@ -56,6 +56,7 @@ export function TableDetailModal({ table, onClose, onUpdated }) {
     try {
       await addTableOrder(table.currentSessionId, selectedProduct, quantity);
       await loadOrders();
+      setQuantity(1);
       onUpdated();
     } catch (err) {
       alert(err.message);
@@ -85,9 +86,9 @@ export function TableDetailModal({ table, onClose, onUpdated }) {
   return (
     <div className="modal-overlay">
       <div className="modal-content table-modal">
-        <header className="modal-header">
+        <header className="table-modal-header">
           <h2>Chi tiết {table.tableName}</h2>
-          <button className="btn-icon" onClick={onClose}>&times;</button>
+          <button className="btn-close-light" onClick={onClose}>&times;</button>
         </header>
 
         {checkoutData ? (
@@ -103,74 +104,91 @@ export function TableDetailModal({ table, onClose, onUpdated }) {
             </div>
           </div>
         ) : (
-          <div className="modal-body">
+          <div className="table-modal-body">
             {!isOccupied ? (
-              <div className="empty-state">
-                <p>Bàn hiện đang trống hoặc chưa mở Order.</p>
-                <button className="btn btn-primary" onClick={handleOpenTable} disabled={isLoading}>
+              <div className="pos-empty-state">
+                <svg fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"></path>
+                </svg>
+                <p>Bàn {table.tableName} hiện đang trống hoặc chưa mở Order.</p>
+                <button className="btn-premium" onClick={handleOpenTable} disabled={isLoading} style={{margin: '0 auto'}}>
                   Mở bàn & Gọi món
                 </button>
               </div>
             ) : (
-              <div className="order-view">
-                <div className="order-list">
+              <div className="pos-layout">
+                <div className="pos-list-section">
                   <h4>Danh sách món đã gọi</h4>
-                  {orders.length === 0 ? (
-                    <p className="text-secondary">Chưa có món nào.</p>
-                  ) : (
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>Tên món</th>
-                          <th>SL</th>
-                          <th>Đơn giá</th>
-                          <th>Thành tiền</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {orders.map(o => (
-                          <tr key={o.id}>
-                            <td>{o.productName}</td>
-                            <td>{o.quantity}</td>
-                            <td>{o.unitPrice.toLocaleString()}đ</td>
-                            <td>{o.totalAmount.toLocaleString()}đ</td>
+                  <div className="pos-table-wrapper">
+                    {orders.length === 0 ? (
+                      <div style={{padding: '32px', textAlign: 'center', color: '#9ca3af'}}>Chưa có món nào.</div>
+                    ) : (
+                      <table className="pos-table">
+                        <thead>
+                          <tr>
+                            <th>Tên món</th>
+                            <th>SL</th>
+                            <th>Đơn giá</th>
+                            <th style={{textAlign: 'right'}}>Thành tiền</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
+                        </thead>
+                        <tbody>
+                          {orders.map(o => (
+                            <tr key={o.id}>
+                              <td style={{fontWeight: 500}}>{o.productName}</td>
+                              <td>x{o.quantity}</td>
+                              <td>{o.unitPrice.toLocaleString()}đ</td>
+                              <td style={{textAlign: 'right', fontWeight: 600}}>{o.totalAmount.toLocaleString()}đ</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
                   
-                  <div className="order-total">
-                    <strong>Tổng cộng:</strong>
-                    <span>{table.totalAmount.toLocaleString()}đ</span>
+                  <div className="pos-summary">
+                    <div className="pos-summary-row">
+                      <span>Số lượng món:</span>
+                      <span>{orders.reduce((acc, curr) => acc + curr.quantity, 0)}</span>
+                    </div>
+                    <div className="pos-summary-row total">
+                      <span>Tổng cộng:</span>
+                      <span className="highlight">{table.totalAmount.toLocaleString()}đ</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="order-actions">
-                  <h4>Thêm món</h4>
-                  <div className="add-form">
+                <div className="pos-action-section">
+                  <h4>Thêm món mới</h4>
+                  <div className="pos-form-group">
+                    <label>Chọn món</label>
                     <select 
                       value={selectedProduct} 
                       onChange={e => setSelectedProduct(e.target.value)}
-                      className="form-input"
+                      className="pos-select"
                     >
                       {menu.map(m => (
                         <option key={m.id} value={m.id}>{m.productName} - {m.sellingPrice.toLocaleString()}đ</option>
                       ))}
                     </select>
+                  </div>
+                  <div className="pos-form-group">
+                    <label>Số lượng</label>
                     <input 
                       type="number" 
                       min="1" 
                       value={quantity} 
                       onChange={e => setQuantity(Number(e.target.value))} 
-                      className="form-input"
-                      style={{width: '80px'}}
+                      className="pos-input"
                     />
-                    <button className="btn btn-secondary" onClick={handleAddOrder} disabled={isLoading}>Thêm</button>
                   </div>
+                  <button className="pos-btn-add" onClick={handleAddOrder} disabled={isLoading}>
+                    + Thêm vào Order
+                  </button>
                   
-                  <hr style={{margin: '24px 0'}} />
-                  <button className="btn btn-primary btn-block" onClick={handleCheckout} disabled={isLoading || orders.length === 0}>
+                  <div className="pos-divider"></div>
+                  
+                  <button className="pos-btn-checkout" onClick={handleCheckout} disabled={isLoading || orders.length === 0}>
                     Thanh toán & In Bill (QR)
                   </button>
                 </div>
