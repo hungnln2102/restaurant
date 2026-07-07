@@ -85,8 +85,8 @@ export function TablesView() {
           <h2>Sơ đồ bàn phục vụ</h2>
           <p className="text-secondary">Quản lý trạng thái bàn, order và thanh toán.</p>
         </div>
-        <button className="btn-premium" onClick={handleAddTable}>
-          <span>+</span> Thêm bàn mới
+        <button className="primary-button" onClick={handleAddTable}>
+          + Thêm bàn mới
         </button>
       </div>
 
