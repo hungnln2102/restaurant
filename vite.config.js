@@ -170,4 +170,7 @@ const inventoryApiPlugin = {
 
 export default defineConfig({
   plugins: [react(), inventoryApiPlugin],
-}); // force restart 2
+  build: {
+    chunkSizeWarningLimit: 1000,
+  },
+});
