@@ -125,3 +125,27 @@ export async function checkoutTableSession(sessionId, tableId) {
     return { totalAmount: Number(sessionRes.rows[0].total_amount) };
   });
 }
+
+export async function reserveTable(tableId) {
+  const res = await query(`
+    update sales.tables 
+    set status = 'reserved' 
+    where id = $1 and status = 'available' 
+    returning id
+  `, [tableId]);
+  
+  if (res.rows.length === 0) throw new Error("Bàn không thể đặt trước (có thể đang có khách hoặc đã đặt).");
+  return { success: true };
+}
+
+export async function cancelReservation(tableId) {
+  const res = await query(`
+    update sales.tables 
+    set status = 'available' 
+    where id = $1 and status = 'reserved' 
+    returning id
+  `, [tableId]);
+  
+  if (res.rows.length === 0) throw new Error("Bàn không ở trạng thái đặt trước.");
+  return { success: true };
+}

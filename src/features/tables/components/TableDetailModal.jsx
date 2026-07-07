@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { createSession, getTableOrders, addTableOrder, checkoutSession } from "../api/tablesApi";
+import { createSession, getTableOrders, addTableOrder, checkoutSession, reserveTable, cancelReservation } from "../api/tablesApi";
 import { fetchMenuProducts } from "../../products/api/menuProductsApi";
 
 export function TableDetailModal({ table, onClose, onUpdated }) {
@@ -65,6 +65,31 @@ export function TableDetailModal({ table, onClose, onUpdated }) {
     }
   };
 
+  const handleReserveTable = async () => {
+    setIsLoading(true);
+    try {
+      await reserveTable(table.id);
+      onUpdated();
+      onClose(); // Đóng modal sau khi đặt
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelReservation = async () => {
+    setIsLoading(true);
+    try {
+      await cancelReservation(table.id);
+      onUpdated();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleCheckout = async () => {
     setIsLoading(true);
     try {
@@ -117,11 +142,25 @@ export function TableDetailModal({ table, onClose, onUpdated }) {
               {!isOccupied ? (
                 <div style={{textAlign: "center", padding: "48px 0"}}>
                   <div className="modal-highlight muted" style={{display: "inline-block", marginBottom: "24px"}}>
-                    <p>Bàn {table.tableName} hiện đang trống hoặc chưa mở Order.</p>
+                    {table.status === "reserved" ? (
+                      <p>Bàn {table.tableName} đã được <strong>khách hàng đặt trước</strong>.</p>
+                    ) : (
+                      <p>Bàn {table.tableName} hiện đang trống hoặc chưa mở Order.</p>
+                    )}
                   </div>
-                  <div>
+                  <div style={{display: "flex", justifyContent: "center", gap: "16px"}}>
+                    {table.status === "reserved" && (
+                      <button className="ghost-button" onClick={handleCancelReservation} disabled={isLoading}>
+                        Hủy đặt bàn
+                      </button>
+                    )}
+                    {table.status === "available" && (
+                      <button className="ghost-button" onClick={handleReserveTable} disabled={isLoading}>
+                        Đặt bàn trước
+                      </button>
+                    )}
                     <button className="primary-button" onClick={handleOpenTable} disabled={isLoading}>
-                      Mở bàn & Gọi món
+                      {table.status === "reserved" ? "Nhận bàn & Gọi món" : "Mở bàn & Gọi món"}
                     </button>
                   </div>
                 </div>

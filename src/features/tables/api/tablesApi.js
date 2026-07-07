@@ -23,6 +23,20 @@ export async function createSession(tableId) {
   return json.data;
 }
 
+export async function reserveTable(tableId) {
+  const res = await fetch(`/api/sales/tables/${tableId}/reserve`, { method: "POST" });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || "Lỗi đặt bàn");
+  return json.data;
+}
+
+export async function cancelReservation(tableId) {
+  const res = await fetch(`/api/sales/tables/${tableId}/cancel-reservation`, { method: "POST" });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || "Lỗi hủy đặt bàn");
+  return json.data;
+}
+
 export async function getTableOrders(sessionId) {
   if (!sessionId) return [];
   const res = await fetch(`/api/sales/tables/sessions/${sessionId}/orders`);

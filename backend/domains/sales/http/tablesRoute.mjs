@@ -5,7 +5,9 @@ import {
   createTableSession, 
   addTableOrder, 
   getTableOrders, 
-  checkoutTableSession 
+  checkoutTableSession,
+  reserveTable,
+  cancelReservation
 } from "../repositories/tablesRepository.mjs";
 
 function badRequest(msg) {
@@ -34,6 +36,22 @@ export async function handleTablesRequest({ method, requestUrl, body }) {
       const tableId = Number(sessionMatch[1]);
       const session = await createTableSession(tableId);
       return { status: 200, payload: { data: session } };
+    }
+
+    // Match /api/sales/tables/:id/reserve
+    const reserveMatch = requestUrl.match(/\/api\/sales\/tables\/(\d+)\/reserve$/);
+    if (method === "POST" && reserveMatch) {
+      const tableId = Number(reserveMatch[1]);
+      const res = await reserveTable(tableId);
+      return { status: 200, payload: { data: res } };
+    }
+
+    // Match /api/sales/tables/:id/cancel-reservation
+    const cancelReserveMatch = requestUrl.match(/\/api\/sales\/tables\/(\d+)\/cancel-reservation$/);
+    if (method === "POST" && cancelReserveMatch) {
+      const tableId = Number(cancelReserveMatch[1]);
+      const res = await cancelReservation(tableId);
+      return { status: 200, payload: { data: res } };
     }
 
     // Match /api/sales/tables/:sessionId/orders
