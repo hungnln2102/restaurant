@@ -62,6 +62,8 @@ export function createClient(options = {}) {
 // create duplicate pools or stack multiple ping intervals.
 const POOL_KEY = "__restaurantManagementPgPool__";
 const KEEPALIVE_KEY = "__restaurantManagementPgKeepAliveTimer__";
+const WARMUP_KEY = "__restaurantManagementPgWarmupState__";
+const DEFAULT_WARMUP_FRESH_MS = 60_000;
 
 function parsePositiveInt(rawValue, fallback) {
   const parsed = Number.parseInt(rawValue, 10);
@@ -172,16 +174,50 @@ export function getPool() {
 // (b) TLS handshake + SCRAM auth. Safe to call multiple times — subsequent
 // calls just hit the live pool.
 export async function warmUpPool() {
-  const startedAt = Date.now();
-  try {
-    await getPool().query("select 1");
-    const elapsedMs = Date.now() - startedAt;
-    console.log(`[pg] Pool warmed up in ${elapsedMs}ms`);
-    return { ok: true, elapsedMs };
-  } catch (error) {
-    console.warn(`[pg] Pool warm-up failed: ${error.message}`);
-    return { ok: false, error };
+  const now = Date.now();
+  const freshMs = parsePositiveInt(
+    process.env.PG_WARMUP_FRESH_MS,
+    DEFAULT_WARMUP_FRESH_MS,
+  );
+  const state = globalThis[WARMUP_KEY];
+
+  if (state?.promise) {
+    return state.promise;
   }
+
+  if (state?.ok && now - state.completedAt < freshMs) {
+    return {
+      ok: true,
+      elapsedMs: 0,
+      skipped: true,
+      ageMs: now - state.completedAt,
+    };
+  }
+
+  const startedAt = now;
+  const promise = getPool()
+    .query("select 1")
+    .then(() => {
+      const elapsedMs = Date.now() - startedAt;
+      globalThis[WARMUP_KEY] = {
+        ok: true,
+        completedAt: Date.now(),
+      };
+      console.log(`[pg] Pool warmed up in ${elapsedMs}ms`);
+      return { ok: true, elapsedMs };
+    })
+    .catch((error) => {
+      globalThis[WARMUP_KEY] = {
+        ok: false,
+        completedAt: Date.now(),
+        error,
+      };
+      console.warn(`[pg] Pool warm-up failed: ${error.message}`);
+      return { ok: false, error };
+    });
+
+  globalThis[WARMUP_KEY] = { promise, startedAt };
+  return promise;
 }
 
 function isTimingEnabled() {

@@ -1,5 +1,5 @@
 import { createStockReceipt as createStockReceiptInRepository } from "../repositories/stockReceiptRepository.mjs";
-import { invalidateInventoryOverviewCache } from "./getInventoryOverview.mjs";
+import { invalidateAfterStockReceipt } from "../../../shared/cacheInvalidation.mjs";
 
 function badRequest(message) {
   const error = new Error(message);
@@ -76,6 +76,6 @@ export function validateStockReceiptPayload(input) {
 
 export async function createStockReceipt(input) {
   const receipt = await createStockReceiptInRepository(validateStockReceiptPayload(input));
-  invalidateInventoryOverviewCache();
+  invalidateAfterStockReceipt();
   return receipt;
 }

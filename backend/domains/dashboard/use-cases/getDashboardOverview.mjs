@@ -1,4 +1,5 @@
 import { getDashboardOverview as getDashboardOverviewFromRepository } from "../repositories/dashboardRepository.mjs";
+import { withCache, invalidateCachePrefix } from "../../../shared/cache.mjs";
 
 const RANGE_TO_DAYS = {
   today: 1,
@@ -7,6 +8,8 @@ const RANGE_TO_DAYS = {
 };
 
 const DEFAULT_RANGE_KEY = "7d";
+const CACHE_PREFIX = "dashboard:";
+const DEFAULT_TTL_MS = 20_000;
 
 function badRequest(message) {
   const error = new Error(message);
@@ -33,5 +36,12 @@ function resolveRangeDays(rawRange) {
 
 export async function getDashboardOverview({ range } = {}) {
   const rangeDays = resolveRangeDays(range);
-  return getDashboardOverviewFromRepository({ rangeDays });
+  const cacheKey = `${CACHE_PREFIX}overview:range=${rangeDays}`;
+  return withCache(cacheKey, DEFAULT_TTL_MS, () =>
+    getDashboardOverviewFromRepository({ rangeDays }),
+  );
+}
+
+export function invalidateDashboardCache() {
+  invalidateCachePrefix(CACHE_PREFIX);
 }

@@ -175,21 +175,17 @@ export async function listAllOrders(filters = {}) {
 
   const whereSql = whereClauses.length > 0 ? `where ${whereClauses.join(" and ")}` : "";
 
-  const countResult = await query(
-    `select count(*)::bigint as total from inventory.product_orders po ${whereSql}`,
-    params,
-  );
-
-  const total = Number(countResult.rows[0]?.total ?? 0);
-
   params.push(limit);
   const limitParamIndex = params.length;
   params.push(offset);
   const offsetParamIndex = params.length;
 
+  // Single query with window function — saves one roundtrip compared to
+  // the previous COUNT(*) + SELECT approach (~250ms on cross-Pacific RTT).
   const result = await query(
     `
-      select ${ORDER_COLUMNS}
+      select ${ORDER_COLUMNS},
+             count(*) over() as _total_count
       from inventory.product_orders po
       join inventory.menu_products mp on mp.id = po.menu_product_id
       ${whereSql}
@@ -198,6 +194,10 @@ export async function listAllOrders(filters = {}) {
     `,
     params,
   );
+
+  const total = result.rows.length > 0
+    ? Number(result.rows[0]._total_count ?? 0)
+    : 0;
 
   return {
     items: result.rows.map(mapOrderRow),

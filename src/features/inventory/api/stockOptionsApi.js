@@ -37,3 +37,16 @@ export async function fetchInventoryProducts() {
   const data = await parseApiResponse(response, "Không thể tải danh sách sản phẩm kho.");
   return Array.isArray(data) ? data : [];
 }
+
+export async function createInventoryProduct(payload) {
+  const response = await fetch("/api/inventory/stock-products", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  return parseApiResponse(response, "Không thể tạo nguyên liệu mới.");
+}

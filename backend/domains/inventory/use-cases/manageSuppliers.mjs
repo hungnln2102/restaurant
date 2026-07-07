@@ -2,6 +2,11 @@ import {
   createSupplier as createSupplierInRepository,
   listSuppliers as listSuppliersInRepository,
 } from "../repositories/supplierRepository.mjs";
+import { withCache } from "../../../shared/cache.mjs";
+import { invalidateAfterSupplierChange } from "../../../shared/cacheInvalidation.mjs";
+
+const CACHE_KEY = "suppliers:list:v1";
+const CACHE_TTL_MS = 30_000;
 
 function badRequest(message) {
   const error = new Error(message);
@@ -91,9 +96,11 @@ export function validateCreateSupplierPayload(input) {
 }
 
 export async function listSuppliers() {
-  return listSuppliersInRepository();
+  return withCache(CACHE_KEY, CACHE_TTL_MS, () => listSuppliersInRepository());
 }
 
 export async function createSupplier(input) {
-  return createSupplierInRepository(validateCreateSupplierPayload(input));
+  const result = await createSupplierInRepository(validateCreateSupplierPayload(input));
+  invalidateAfterSupplierChange();
+  return result;
 }

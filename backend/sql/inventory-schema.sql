@@ -308,12 +308,17 @@ create index if not exists idx_supplier_products_stock_pref_updated
 -- which falls back to supplier_products by (supplier_id, stock_product_id)
 -- when an inbound row has no unit_price snapshot. Composite leading on
 -- supplier_id matches the equality predicates in the LATERAL join.
-create index if not exists idx_supplier_products_supplier_stock
-  on inventory.supplier_products (supplier_id, stock_product_id);
+create index if not exists idx_supplier_products_supplier_stock_pref_updated
+  on inventory.supplier_products (supplier_id, stock_product_id, is_preferred desc, updated_at desc);
 
 -- Supports ORDER BY sb.updated_at DESC used on the overview balances list.
 create index if not exists idx_stock_balances_updated_at_desc
   on inventory.stock_balances (updated_at desc);
+
+-- Supports the overview demand aggregate after the balances query has already
+-- narrowed the screen to 20 stock products.
+create index if not exists idx_menu_product_components_stock_menu
+  on inventory.menu_product_components (stock_product_id, menu_product_id);
 
 -- Supports ORDER BY menu_product_id, sort_order, id for the recipe components
 -- listing used by the product portioning overview.

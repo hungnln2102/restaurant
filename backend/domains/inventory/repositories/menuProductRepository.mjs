@@ -217,6 +217,16 @@ async function insertMenuProductComponents(client, menuProductId, components) {
       ],
     );
 
+    // Tự động khởi tạo dòng tồn kho cho nguyên liệu mới nếu nó chưa có trong kho
+    await client.query(
+      `
+        insert into inventory.stock_balances (stock_product_id, on_hand_quantity, on_hand_unit)
+        values ($1, 0, $2)
+        on conflict (stock_product_id) do nothing
+      `,
+      [component.stockProductId, component.unit],
+    );
+
     insertedRows.push(inserted.rows[0]);
   }
 
@@ -358,30 +368,79 @@ function computeTotalsFromComponents(components, sellingPrice) {
 }
 
 export async function getMenuProductById(id) {
-  // Use a single connection so the row + components fetch is a consistent
-  // snapshot even if another worker edits the components in parallel.
-  return withTransaction(async (client) => {
-    const row = await fetchMenuProductRowById(client, id);
+  // Read-only: no need for a transaction. Using pool queries directly saves
+  // two roundtrips (BEGIN + COMMIT ~500ms on cross-Pacific RTT).
+  const result = await query(
+    `
+      select
+        id,
+        product_name,
+        product_category,
+        serving_unit,
+        selling_price,
+        status,
+        created_at,
+        updated_at
+      from inventory.menu_products
+      where id = $1
+    `,
+    [id],
+  );
 
-    if (!row) {
-      throw buildNotFoundError();
-    }
+  const row = result.rows[0] ?? null;
 
-    const components = await fetchComponentsWithNames(client, Number(row.id));
-    const mapped = mapMenuProductRow(row);
-    const { totalCost, costPercent, hasMissingPrice } = computeTotalsFromComponents(
-      components,
-      mapped.sellingPrice,
-    );
+  if (!row) {
+    throw buildNotFoundError();
+  }
 
-    return {
-      ...mapped,
-      components,
-      totalCost,
-      costPercent,
-      hasMissingPrice,
-    };
-  });
+  // The lateral price subquery mirrors the one in productPortioningRepository
+  // so the View modal sees the exact same unit price the overview table uses.
+  const componentsResult = await query(
+    `
+      select
+        mpc.id,
+        mpc.menu_product_id,
+        mpc.stock_product_id,
+        sp.product_name as stock_product_name,
+        sp.product_category as ingredient_category,
+        sb.on_hand_unit as stock_unit,
+        mpc.quantity,
+        mpc.unit,
+        mpc.sort_order,
+        mpc.notes,
+        mpc.created_at,
+        mpc.updated_at,
+        price.unit_price as ingredient_unit_price
+      from inventory.menu_product_components mpc
+      join inventory.stock_products sp on sp.id = mpc.stock_product_id
+      left join inventory.stock_balances sb on sb.stock_product_id = sp.id
+      left join lateral (
+        select unit_price
+        from inventory.supplier_products
+        where stock_product_id = sp.id
+        order by is_preferred desc, updated_at desc
+        limit 1
+      ) price on true
+      where mpc.menu_product_id = $1
+      order by mpc.sort_order asc, mpc.id asc
+    `,
+    [id],
+  );
+
+  const components = componentsResult.rows.map(mapComponentRow);
+  const mapped = mapMenuProductRow(row);
+  const { totalCost, costPercent, hasMissingPrice } = computeTotalsFromComponents(
+    components,
+    mapped.sellingPrice,
+  );
+
+  return {
+    ...mapped,
+    components,
+    totalCost,
+    costPercent,
+    hasMissingPrice,
+  };
 }
 
 export async function updateMenuProduct(input) {

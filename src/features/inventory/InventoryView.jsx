@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { InventoryOverviewContent } from "./components/InventoryOverviewContent";
 import { InventoryPortioningContent } from "./components/InventoryPortioningContent";
 import { InventoryReceiptModal } from "./components/InventoryReceiptModal";
+import { InventoryCheckModal } from "./components/InventoryCheckModal";
+import { InventoryChecksList } from "./components/InventoryChecksList";
 
 const inventoryTabs = [
   {
@@ -14,11 +16,17 @@ const inventoryTabs = [
     label: "Quản lý định lượng",
     description: "Kiểm soát định mức nguyên liệu theo món, đơn vị chuẩn và tỷ lệ quy đổi.",
   },
+  {
+    id: "history",
+    label: "Lịch sử kiểm kê",
+    description: "Xem lại các phiếu kiểm kê kho, đối chiếu số lượng thực tế và lịch sử chênh lệch.",
+  },
 ];
 
 export function InventoryView() {
   const [activeTab, setActiveTab] = useState("overview");
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [isCheckModalOpen, setIsCheckModalOpen] = useState(false);
   const [overviewRefreshKey, setOverviewRefreshKey] = useState(0);
   const activeMeta = inventoryTabs.find((tab) => tab.id === activeTab) ?? inventoryTabs[0];
 
@@ -35,7 +43,7 @@ export function InventoryView() {
         </div>
 
         <div className="toolbar-actions">
-          <button type="button" className="ghost-button">
+          <button type="button" className="ghost-button" onClick={() => setIsCheckModalOpen(true)}>
             Kiểm kê kho
           </button>
           <button
@@ -79,13 +87,21 @@ export function InventoryView() {
 
       {activeTab === "overview" ? (
         <InventoryOverviewContent refreshKey={overviewRefreshKey} />
-      ) : (
+      ) : activeTab === "portioning" ? (
         <InventoryPortioningContent />
+      ) : (
+        <InventoryChecksList />
       )}
 
       <InventoryReceiptModal
         isOpen={isReceiptModalOpen}
         onClose={() => setIsReceiptModalOpen(false)}
+        onSaved={handleReceiptSaved}
+      />
+
+      <InventoryCheckModal
+        isOpen={isCheckModalOpen}
+        onClose={() => setIsCheckModalOpen(false)}
         onSaved={handleReceiptSaved}
       />
     </section>

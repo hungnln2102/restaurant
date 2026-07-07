@@ -483,25 +483,8 @@ export function InventoryOverviewContent({ refreshKey }) {
                               type="button"
                               className="row-action-button"
                               onClick={() => setViewingInbound(row)}
-                              disabled={isDeleting}
                             >
                               Xem
-                            </button>
-                            <button
-                              type="button"
-                              className="row-action-button"
-                              onClick={() => setEditingInbound(row)}
-                              disabled={isDeleting}
-                            >
-                              Sửa
-                            </button>
-                            <button
-                              type="button"
-                              className="row-action-button row-action-danger"
-                              onClick={() => handleDeleteInbound(row)}
-                              disabled={isDeleting}
-                            >
-                              {isDeleting ? "Đang xóa..." : "Xóa"}
                             </button>
                           </div>
                         </td>

@@ -31,3 +31,24 @@ export async function deleteStockBalance(id) {
 
   return parseResponse(response);
 }
+
+export async function submitInventoryCheck(payload) {
+  const response = await fetch("/api/inventory/stock-balances/bulk-check", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  return parseResponse(response);
+}
+
+export async function syncStockBalances() {
+  const response = await fetch("/api/inventory/stock-balances/sync", {
+    method: "POST",
+    headers: { Accept: "application/json" }
+  });
+  return parseResponse(response);
+}

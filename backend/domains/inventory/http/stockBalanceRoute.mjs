@@ -2,7 +2,9 @@ import {
   deleteStockBalance,
   updateStockBalance,
 } from "../repositories/stockBalanceRepository.mjs";
-import { invalidateInventoryOverviewCache } from "../use-cases/getInventoryOverview.mjs";
+import { submitInventoryCheck } from "../use-cases/submitInventoryCheck.mjs";
+import { syncInventoryData } from "../use-cases/syncInventoryData.mjs";
+import { invalidateAfterBalanceChange } from "../../../shared/cacheInvalidation.mjs";
 
 function badRequest(message) {
   const error = new Error(message);
@@ -39,6 +41,16 @@ function normalizeQuantity(value) {
 
 export async function handleStockBalanceRequest({ method, requestUrl, body }) {
   try {
+    if (method === "POST" && requestUrl && requestUrl.includes("/bulk-check")) {
+      const data = await submitInventoryCheck(body);
+      return { status: 200, payload: { data } };
+    }
+
+    if (method === "POST" && requestUrl && requestUrl.includes("/sync")) {
+      const data = await syncInventoryData();
+      return { status: 200, payload: { data } };
+    }
+
     const id = parseIdFromUrl(requestUrl);
 
     if (!id) {
@@ -51,7 +63,7 @@ export async function handleStockBalanceRequest({ method, requestUrl, body }) {
     if (method === "PUT") {
       const onHandQuantity = normalizeQuantity(body?.onHandQuantity);
       const data = await updateStockBalance({ id, onHandQuantity });
-      invalidateInventoryOverviewCache();
+      invalidateAfterBalanceChange();
 
       return {
         status: 200,
@@ -61,7 +73,7 @@ export async function handleStockBalanceRequest({ method, requestUrl, body }) {
 
     if (method === "DELETE") {
       const data = await deleteStockBalance(id);
-      invalidateInventoryOverviewCache();
+      invalidateAfterBalanceChange();
 
       return {
         status: 200,

@@ -1,3 +1,8 @@
+const OVERVIEW_CACHE_TTL_MS = 5_000;
+
+let overviewCache = null;
+let overviewInFlight = null;
+
 function normalizeApiErrorMessage(raw) {
   if (raw === undefined || raw === null) {
     return "";
@@ -68,12 +73,33 @@ async function parseApiResponse(response) {
   return data;
 }
 
-export async function fetchInventoryOverview() {
-  const response = await fetch("/api/inventory/overview", {
+export async function fetchInventoryOverview({ force = false } = {}) {
+  const now = Date.now();
+
+  if (!force && overviewCache && now - overviewCache.createdAt < OVERVIEW_CACHE_TTL_MS) {
+    return overviewCache.data;
+  }
+
+  if (!force && overviewInFlight) {
+    return overviewInFlight;
+  }
+
+  overviewInFlight = fetch("/api/inventory/overview", {
     headers: {
       Accept: "application/json",
     },
-  });
+  })
+    .then(parseApiResponse)
+    .then((data) => {
+      overviewCache = {
+        data,
+        createdAt: Date.now(),
+      };
+      return data;
+    })
+    .finally(() => {
+      overviewInFlight = null;
+    });
 
-  return parseApiResponse(response);
+  return overviewInFlight;
 }

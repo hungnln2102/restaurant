@@ -18,23 +18,47 @@ function mapBalanceRow(row) {
     requiredQuantity = Number.isFinite(numericRequired) ? numericRequired : null;
   }
 
-  return {
-    id: Number(row.balance_id),
-    productId: Number(row.stock_product_id),
-    productName: row.product_name,
-    inputQuantity: row.input_quantity === null ? null : Number(row.input_quantity),
-    inputUnit: row.input_unit,
-    quantity: Number(row.on_hand_quantity),
-    unit: row.display_stock_unit,
-    conversionRatio: row.conversion_ratio === null ? null : Number(row.conversion_ratio),
-    unitPrice:
-      row.unit_price === null || row.unit_price === undefined ? null : Number(row.unit_price),
-    currencyCode: row.currency_code ?? "VND",
-    pricingUnit: row.pricing_unit ?? null,
-    requiredQuantity,
-    requiredIncomplete: Boolean(row.required_incomplete),
-    updatedAt: row.updated_at,
-  };
+    const onHand = Number(row.on_hand_quantity);
+    let missingQuantity = 0;
+    let status = "Sufficient";
+
+    if (requiredQuantity !== null) {
+      if (onHand >= requiredQuantity) {
+        status = "Sufficient";
+      } else if (onHand > 0) {
+        status = "Low Stock";
+        missingQuantity = requiredQuantity - onHand;
+      } else {
+        status = "Needs Restock";
+        missingQuantity = requiredQuantity;
+      }
+    } else {
+      if (onHand === 0) {
+        status = "Needs Restock";
+      }
+    }
+
+    return {
+      id: Number(row.balance_id),
+      productId: Number(row.stock_product_id),
+      productName: row.product_name,
+      inputQuantity: row.input_quantity === null ? null : Number(row.input_quantity),
+      inputUnit: row.input_unit,
+      quantity: onHand,
+      unit: row.display_stock_unit,
+      conversionRatio: row.conversion_ratio === null ? null : Number(row.conversion_ratio),
+      unitPrice:
+        row.unit_price === null || row.unit_price === undefined ? null : Number(row.unit_price),
+      currencyCode: row.currency_code ?? "VND",
+      pricingUnit: row.pricing_unit ?? null,
+      requiredQuantity,
+      requiredIncomplete: Boolean(row.required_incomplete),
+      missingQuantity,
+      status,
+      varianceQuantity: row.variance_quantity === null ? null : Number(row.variance_quantity),
+      lastCheckedAt: row.last_checked_at,
+      updatedAt: row.updated_at,
+    };
 }
 
 function toNullableNumber(value) {
@@ -161,7 +185,8 @@ const STATS_QUERY = `
   inbound_stats as (
     select
       count(*) filter (where created_at >= date_trunc('day', now())
-        and created_at < date_trunc('day', now()) + interval '1 day') as today_inbounds
+        and created_at < date_trunc('day', now()) + interval '1 day'
+        and supplier_id is not null) as today_inbounds
     from inventory.stock_inbounds
   )
   select
@@ -174,93 +199,69 @@ const STATS_QUERY = `
 `;
 
 const BALANCES_QUERY = `
-  with latest_inbounds as (
-    select distinct on (si.stock_product_id)
-      si.id,
-      si.stock_product_id,
-      si.input_quantity,
-      si.input_unit,
-      si.unit_conversion_id,
-      si.created_at
-    from inventory.stock_inbounds si
-    order by si.stock_product_id, si.created_at desc, si.id desc
+  with selected_balances as (
+    select
+      sb.id,
+      sb.stock_product_id,
+      sb.on_hand_quantity,
+      sb.on_hand_unit,
+      sb.variance_quantity,
+      sb.last_checked_at,
+      sb.conversion_ratio,
+      sb.updated_at,
+      sp.product_name
+    from inventory.stock_balances sb
+    join inventory.stock_products sp
+      on sp.id = sb.stock_product_id
+    order by sb.updated_at desc, sp.product_name asc
+    limit 20
   ),
-  -- required_per_product aggregates the minimum ingredient demand per
-  -- stock_product across every menu_product that currently has an ACTIVE
-  -- sales plan. The math, per the product spec, is:
-  --
-  --   required(stock_product) = SUM_over_active_menu(
-  --     component.quantity * unit_factor * sales_plan.sales_target
-  --   )
-  --
-  -- where unit_factor is:
-  --   * 1, when the component.unit matches the balance.on_hand_unit
-  --     (case/whitespace-insensitive). The spec is explicit: "Đơn vị tính
-  --     KHỚP rồi thì KHÔNG quy đổi" — we must NEVER multiply by a stray
-  --     ratio in this case even if a (g -> g) row happens to exist in
-  --     unit_conversions.
-  --   * the matching inventory.unit_conversions.conversion_ratio when the
-  --     units differ AND a rule is found. Rules are stored as "1 stock_unit
-  --     = ratio processing_unit" (see portioningRepository.mjs ratioLabel).
-  --   * 1 as a safe fallback when no rule is found. required_incomplete is
-  --     raised so the FE can show a warning asterisk.
-  --   * 1 (no warning) when the stock_product currently has no balance row:
-  --     we cannot verify the on-hand unit, but the user's intent ("đơn vị
-  --     khớp") is the common case and forcing the warning would generate
-  --     a lot of false positives on freshly-created products.
-  --
-  -- IMPORTANT: we use LEFT JOIN inventory.stock_balances here. The previous
-  -- INNER JOIN dropped any stock_product without a balance row, which made
-  -- the CTE silently produce NO row for such products and the main query's
-  -- LEFT JOIN turned that into required_quantity = NULL ("Chưa có" in UI)
-  -- even when the math was perfectly well-defined from the component data
-  -- alone. Aggregating on mpc.stock_product_id keeps the result independent
-  -- of whether a balance has been recorded yet.
-  --
-  -- LATERAL ... LIMIT 1 protects against the (rare) case where multiple
-  -- unit_conversions rows share the same (stock_unit, processing_unit)
-  -- pair across portion definitions; we deterministically pick the oldest
-  -- by id rather than multiplying the SUM.
+  -- Keep expensive demand math scoped to the 20 balance rows shown in the UI.
+  -- The previous query aggregated every active sales-plan component in the
+  -- database before applying the balances LIMIT, so cold loads got slower as
+  -- historical recipes/plans grew even though the screen only renders 20 rows.
   required_per_product as (
     select
       mpc.stock_product_id,
       sum(
         mpc.quantity::numeric
         * case
-            when sb_inner.on_hand_unit is null then 1
-            when lower(trim(coalesce(mpc.unit, ''))) = lower(trim(sb_inner.on_hand_unit)) then 1
+            when sb.on_hand_unit is null then 1
+            when lower(trim(coalesce(mpc.unit, ''))) = lower(trim(sb.on_hand_unit)) then 1
             else coalesce(uc_lookup.conversion_ratio, 1)
           end
         * psp.sales_target::numeric
       ) as required_quantity,
       bool_or(
-        sb_inner.on_hand_unit is not null
-        and lower(trim(coalesce(mpc.unit, ''))) <> lower(trim(sb_inner.on_hand_unit))
+        sb.on_hand_unit is not null
+        and lower(trim(coalesce(mpc.unit, ''))) <> lower(trim(sb.on_hand_unit))
         and uc_lookup.conversion_ratio is null
       ) as required_incomplete
-    from inventory.product_sales_plans psp
+    from selected_balances sb
     join inventory.menu_product_components mpc
-      on mpc.menu_product_id = psp.menu_product_id
-    left join inventory.stock_balances sb_inner
-      on sb_inner.stock_product_id = mpc.stock_product_id
+      on mpc.stock_product_id = sb.stock_product_id
+    join inventory.product_sales_plans psp
+      on psp.menu_product_id = mpc.menu_product_id
+     and psp.status = 'active'
     left join lateral (
       select uc.conversion_ratio
       from inventory.unit_conversions uc
       where lower(trim(uc.stock_unit)) = lower(trim(coalesce(mpc.unit, '')))
-        and lower(trim(uc.processing_unit)) = lower(trim(coalesce(sb_inner.on_hand_unit, '')))
+        and lower(trim(uc.processing_unit)) = lower(trim(coalesce(sb.on_hand_unit, '')))
       order by uc.id
       limit 1
     ) uc_lookup on true
-    where psp.status = 'active'
     group by mpc.stock_product_id
   )
   select
     sb.id as balance_id,
     sb.stock_product_id,
-    sp.product_name,
+    sb.product_name,
     li.input_quantity,
     li.input_unit,
     sb.on_hand_quantity,
+    sb.variance_quantity,
+    sb.last_checked_at,
     coalesce(uc.processing_unit, li.input_unit, sb.on_hand_unit) as display_stock_unit,
     sb.conversion_ratio,
     price.unit_price,
@@ -269,11 +270,18 @@ const BALANCES_QUERY = `
     rpp.required_quantity,
     coalesce(rpp.required_incomplete, false) as required_incomplete,
     sb.updated_at
-  from inventory.stock_balances sb
-  join inventory.stock_products sp
-    on sp.id = sb.stock_product_id
-  left join latest_inbounds li
-    on li.stock_product_id = sb.stock_product_id
+  from selected_balances sb
+  left join lateral (
+    select
+      si.input_quantity,
+      si.input_unit,
+      si.unit_conversion_id
+    from inventory.stock_inbounds si
+    where si.stock_product_id = sb.stock_product_id
+      and si.supplier_id is not null
+    order by si.created_at desc, si.id desc
+    limit 1
+  ) li on true
   left join inventory.unit_conversions uc
     on uc.id = li.unit_conversion_id
   left join required_per_product rpp
@@ -288,7 +296,7 @@ const BALANCES_QUERY = `
     order by sp_price.is_preferred desc, sp_price.updated_at desc
     limit 1
   ) price on true
-  order by sb.updated_at desc, sp.product_name asc
+  order by sb.updated_at desc, sb.product_name asc
   limit 20
 `;
 
@@ -331,6 +339,7 @@ const TIMELINE_QUERY = `
       sp_price.updated_at desc
     limit 1
   ) supplier_price on si.supplier_id is not null
+  where si.supplier_id is not null
   order by si.created_at desc, si.id desc
   limit 5
 `;

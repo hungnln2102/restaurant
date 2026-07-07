@@ -1,4 +1,5 @@
 import { createPortioningRule as createPortioningRuleInRepository } from "../repositories/portioningRepository.mjs";
+import { invalidateAfterPortioningRuleChange } from "../../../shared/cacheInvalidation.mjs";
 
 function badRequest(message) {
   const error = new Error(message);
@@ -38,5 +39,7 @@ export function validatePortioningPayload(input) {
 }
 
 export async function createPortioningRule(input) {
-  return createPortioningRuleInRepository(validatePortioningPayload(input));
+  const result = await createPortioningRuleInRepository(validatePortioningPayload(input));
+  invalidateAfterPortioningRuleChange();
+  return result;
 }

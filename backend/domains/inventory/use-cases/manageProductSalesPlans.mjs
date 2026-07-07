@@ -4,6 +4,11 @@ import {
   listSalesPlans as listSalesPlansInRepository,
   updateSalesPlan as updateSalesPlanInRepository,
 } from "../repositories/productSalesPlanRepository.mjs";
+import { withCache } from "../../../shared/cache.mjs";
+import { invalidateAfterSalesPlanChange } from "../../../shared/cacheInvalidation.mjs";
+
+const CACHE_KEY = "salesPlans:list:v1";
+const CACHE_TTL_MS = 15_000;
 
 const ALLOWED_STATUSES = new Set(["active", "limited", "paused"]);
 const MAX_NOTES_LENGTH = 500;
@@ -131,17 +136,23 @@ export function validateUpdatePayload(input) {
 }
 
 export async function listSalesPlans() {
-  return listSalesPlansInRepository();
+  return withCache(CACHE_KEY, CACHE_TTL_MS, () => listSalesPlansInRepository());
 }
 
 export async function createSalesPlan(input) {
-  return createSalesPlanInRepository(validateCreatePayload(input));
+  const result = await createSalesPlanInRepository(validateCreatePayload(input));
+  invalidateAfterSalesPlanChange();
+  return result;
 }
 
 export async function updateSalesPlan(id, input) {
-  return updateSalesPlanInRepository({ id, ...validateUpdatePayload(input) });
+  const result = await updateSalesPlanInRepository({ id, ...validateUpdatePayload(input) });
+  invalidateAfterSalesPlanChange();
+  return result;
 }
 
 export async function deleteSalesPlan(id) {
-  return deleteSalesPlanInRepository(id);
+  const result = await deleteSalesPlanInRepository(id);
+  invalidateAfterSalesPlanChange();
+  return result;
 }

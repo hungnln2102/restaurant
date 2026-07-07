@@ -3,6 +3,7 @@ import {
   listAllOrders as listAllOrdersInRepository,
   listOrdersByMenuProduct as listOrdersByMenuProductInRepository,
 } from "../repositories/productOrderRepository.mjs";
+import { invalidateAfterOrderCreated } from "../../../shared/cacheInvalidation.mjs";
 
 const ALLOWED_ORDER_TYPES = new Set(["dine_in", "takeaway"]);
 const MAX_NOTES_LENGTH = 500;
@@ -138,5 +139,7 @@ export async function listAllOrders(filters = {}) {
 }
 
 export async function createOrder(input) {
-  return createOrderInRepository(validateCreatePayload(input));
+  const result = await createOrderInRepository(validateCreatePayload(input));
+  invalidateAfterOrderCreated();
+  return result;
 }

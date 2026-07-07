@@ -5,6 +5,11 @@ import {
   listMenuProducts as listMenuProductsInRepository,
   updateMenuProduct as updateMenuProductInRepository,
 } from "../repositories/menuProductRepository.mjs";
+import { withCache } from "../../../shared/cache.mjs";
+import { invalidateAfterMenuProductChange } from "../../../shared/cacheInvalidation.mjs";
+
+const CACHE_KEY = "menuProducts:list:v1";
+const CACHE_TTL_MS = 20_000;
 
 const ALLOWED_STATUSES = new Set(["active", "inactive"]);
 
@@ -235,11 +240,13 @@ function validateMenuProductId(id) {
 }
 
 export async function listMenuProducts() {
-  return listMenuProductsInRepository();
+  return withCache(CACHE_KEY, CACHE_TTL_MS, () => listMenuProductsInRepository());
 }
 
 export async function createMenuProduct(input) {
-  return createMenuProductInRepository(validateCreateMenuProductPayload(input));
+  const result = await createMenuProductInRepository(validateCreateMenuProductPayload(input));
+  invalidateAfterMenuProductChange();
+  return result;
 }
 
 export async function getMenuProductById(id) {
@@ -251,13 +258,17 @@ export async function updateMenuProduct(input) {
   const validatedId = validateMenuProductId(input?.id);
   const payload = validateCreateMenuProductPayload(input);
 
-  return updateMenuProductInRepository({
+  const result = await updateMenuProductInRepository({
     id: validatedId,
     ...payload,
   });
+  invalidateAfterMenuProductChange();
+  return result;
 }
 
 export async function deleteMenuProduct(id) {
   const validatedId = validateMenuProductId(id);
-  return deleteMenuProductInRepository(validatedId);
+  const result = await deleteMenuProductInRepository(validatedId);
+  invalidateAfterMenuProductChange();
+  return result;
 }

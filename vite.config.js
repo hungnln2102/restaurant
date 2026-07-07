@@ -21,6 +21,7 @@ import { handleStockInboundRequest } from "./backend/domains/inventory/http/stoc
 import { handleMenuProductRequest } from "./backend/domains/inventory/http/menuProductRoute.mjs";
 import { handleProductSalesPlanRequest } from "./backend/domains/inventory/http/productSalesPlanRoute.mjs";
 import { handleProductOrderRequest } from "./backend/domains/inventory/http/productOrderRoute.mjs";
+import { handleStockCheckRequest } from "./backend/domains/inventory/http/stockCheckRoute.mjs";
 import { handleDashboardOverviewRequest } from "./backend/domains/dashboard/http/dashboardRoute.mjs";
 
 try {
@@ -59,6 +60,7 @@ const inventoryApiPlugin = {
       const isProductOrderRoute = requestUrl.startsWith("/api/inventory/product-orders");
       const isStockBalanceRoute = requestUrl.startsWith("/api/inventory/stock-balances");
       const isStockInboundRoute = requestUrl.startsWith("/api/inventory/stock-inbounds");
+      const isStockCheckRoute = requestUrl.startsWith("/api/inventory/stock-checks");
       const isDashboardRoute = requestUrl.startsWith("/api/dashboard");
 
       if (
@@ -74,6 +76,7 @@ const inventoryApiPlugin = {
         !isProductOrderRoute &&
         !isStockBalanceRoute &&
         !isStockInboundRoute &&
+        !isStockCheckRoute &&
         !isDashboardRoute
       ) {
         next();
@@ -104,7 +107,7 @@ const inventoryApiPlugin = {
             requestUrl,
           });
         } else if (isStockProductRoute) {
-          result = await handleStockProductRequest({ method: req.method });
+          result = await handleStockProductRequest({ method: req.method, body });
         } else if (isMenuProductRoute) {
           result = await handleMenuProductRequest({
             method: req.method,
@@ -137,6 +140,11 @@ const inventoryApiPlugin = {
             requestUrl,
             body,
           });
+        } else if (isStockCheckRoute) {
+          result = await handleStockCheckRequest({
+            method: req.method,
+            requestUrl,
+          });
         } else {
           result = await handleDashboardOverviewRequest({
             method: req.method,
@@ -146,8 +154,9 @@ const inventoryApiPlugin = {
 
         sendJson(res, result.status, result.payload);
       } catch (error) {
-        sendJson(res, 400, {
-          error: "Payload không hợp lệ.",
+        console.error("API Middleware Error:", error);
+        sendJson(res, 500, {
+          error: "Đã xảy ra lỗi hệ thống: " + error.message,
         });
       }
     };
@@ -161,4 +170,4 @@ const inventoryApiPlugin = {
 
 export default defineConfig({
   plugins: [react(), inventoryApiPlugin],
-});
+}); // force restart 2

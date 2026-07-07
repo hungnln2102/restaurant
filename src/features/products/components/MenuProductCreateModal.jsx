@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchInventoryProducts } from "../../inventory/api/stockOptionsApi";
 import { createMenuProduct } from "../api/menuProductsApi";
-
+import { StockProductQuickAddModal } from "./StockProductQuickAddModal";
 const initialForm = {
   productName: "",
   productCategory: "",
@@ -138,6 +138,7 @@ export function MenuProductCreateModal({ isOpen, onClose, onCreated }) {
   const [stockProductsError, setStockProductsError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [quickAddTargetRow, setQuickAddTargetRow] = useState(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -206,6 +207,11 @@ export function MenuProductCreateModal({ isOpen, onClose, onCreated }) {
   }
 
   function handleStockProductChange(tempId, rawValue) {
+    if (rawValue === "QUICK_ADD") {
+      setQuickAddTargetRow(tempId);
+      return;
+    }
+
     const stockProductId = rawValue;
     const numericId = Number(rawValue);
     const selectedProduct = Number.isFinite(numericId)
@@ -228,6 +234,23 @@ export function MenuProductCreateModal({ isOpen, onClose, onCreated }) {
         };
       }),
     );
+  }
+
+  function handleQuickAddCreated(newProduct) {
+    setStockProducts(current => {
+      const next = [...current, newProduct];
+      next.sort((a, b) => a.productName.localeCompare(b.productName));
+      return next;
+    });
+    
+    setComponents(current =>
+      current.map(row => {
+        if (row.tempId !== quickAddTargetRow) return row;
+        return { ...row, stockProductId: String(newProduct.id) };
+      })
+    );
+    
+    setQuickAddTargetRow(null);
   }
 
   function addComponentRow() {
@@ -445,6 +468,7 @@ export function MenuProductCreateModal({ isOpen, onClose, onCreated }) {
                                 ? "-- Chọn nguyên liệu --"
                                 : "Chưa có nguyên liệu trong kho"}
                             </option>
+                            {!isLoadingStockProducts && <option value="QUICK_ADD" style={{fontWeight: "bold"}}>+ Thêm nhanh nguyên liệu...</option>}
                             {stockProducts.map((product) => (
                               <option key={product.id} value={product.id}>
                                 {product.productName}
@@ -513,6 +537,12 @@ export function MenuProductCreateModal({ isOpen, onClose, onCreated }) {
           </div>
         </form>
       </div>
+
+      <StockProductQuickAddModal
+        isOpen={Boolean(quickAddTargetRow)}
+        onClose={() => setQuickAddTargetRow(null)}
+        onCreated={handleQuickAddCreated}
+      />
     </div>
   );
 }

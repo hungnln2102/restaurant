@@ -102,13 +102,12 @@ async function createAdjustmentLot(client, stockProductId, onHandUnit, addedQuan
   );
 }
 
-export async function updateStockBalance({ id, onHandQuantity }) {
+export async function updateStockBalanceInTx(client, { id, onHandQuantity }) {
   if (!Number.isFinite(onHandQuantity) || onHandQuantity < 0) {
     throw badRequest("Tồn kho phải lớn hơn hoặc bằng 0.");
   }
 
-  return withTransaction(async (client) => {
-    // Lock the balance row first so concurrent updates of the same row are
+  // Lock the balance row first so concurrent updates of the same row are
     // serialized; this also pins the stock_product_id we hand to the FIFO
     // and adjustment helpers.
     const balanceResult = await client.query(
@@ -148,10 +147,30 @@ export async function updateStockBalance({ id, onHandQuantity }) {
     );
 
     return mapBalanceRow(updated.rows[0]);
+}
+
+export async function updateStockBalance(params) {
+  return withTransaction(async (client) => {
+    return updateStockBalanceInTx(client, params);
   });
 }
 
 export async function deleteStockBalance(id) {
+  // Prevent deletion if the stock product is used in any active or inactive portioning (menu_product_components)
+  const usageCheck = await query(`
+    select mpc.id 
+    from inventory.stock_balances sb
+    join inventory.menu_product_components mpc on mpc.stock_product_id = sb.stock_product_id
+    where sb.id = $1
+    limit 1
+  `, [id]);
+  
+  if (usageCheck.rows.length > 0) {
+    const error = new Error("Nguyên liệu này đang được dùng trong định lượng (Công thức món), không thể xóa.");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const result = await query(
     `
       delete from inventory.stock_balances
