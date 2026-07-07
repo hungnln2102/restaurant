@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "db:test": "node --env-file=backend/.env backend/scripts/test-db-connection.mjs",
+    "db:reset": "node --env-file=backend/.env backend/scripts/reset-inventory-schema.mjs",
     "db:schema:inventory": "node --env-file=backend/.env backend/scripts/apply-inventory-schema.mjs",
     "db:seed:inventory": "node --env-file=backend/.env backend/scripts/seed-inventory-portioning.mjs",
     "db:seed:product-portioning": "node --env-file=backend/.env backend/scripts/seed-product-portioning.mjs",

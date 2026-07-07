@@ -87,6 +87,8 @@ create table if not exists inventory.stock_balances (
   on_hand_unit text not null,
   unit_conversion_id bigint references inventory.unit_conversions(id) on delete set null,
   conversion_ratio numeric(14,4) check (conversion_ratio is null or conversion_ratio > 0),
+  variance_quantity numeric(14,4),
+  last_checked_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint chk_stock_balances_conversion_snapshot
@@ -363,3 +365,23 @@ comment on column inventory.product_orders.cost_amount is 'Total cost of goods s
 comment on column inventory.product_orders.profit_amount is 'Profit for the order (total_amount - cost_amount).';
 comment on column inventory.product_orders.currency_code is 'Currency code stored as ISO-like text (default VND).';
 comment on column inventory.product_orders.ordered_at is 'Wall-clock time when the order was placed; used for ordering and reporting.';
+c r e a t e   t a b l e   i f   n o t   e x i s t s   i n v e n t o r y . s t o c k _ c h e c k s   (  
+     i d   b i g s e r i a l   p r i m a r y   k e y ,  
+     c h e c k _ c o d e   t e x t   n o t   n u l l   u n i q u e ,  
+     s t a t u s   t e x t   n o t   n u l l   d e f a u l t   ' p e n d i n g ' ,  
+     n o t e s   t e x t ,  
+     c r e a t e d _ a t   t i m e s t a m p t z   n o t   n u l l   d e f a u l t   n o w ( ) ,  
+     u p d a t e d _ a t   t i m e s t a m p t z   n o t   n u l l   d e f a u l t   n o w ( )  
+ ) ;  
+  
+ c r e a t e   t a b l e   i f   n o t   e x i s t s   i n v e n t o r y . s t o c k _ c h e c k _ i t e m s   (  
+     i d   b i g s e r i a l   p r i m a r y   k e y ,  
+     c h e c k _ i d   b i g i n t   n o t   n u l l   r e f e r e n c e s   i n v e n t o r y . s t o c k _ c h e c k s ( i d )   o n   d e l e t e   c a s c a d e ,  
+     s t o c k _ p r o d u c t _ i d   b i g i n t   n o t   n u l l   r e f e r e n c e s   i n v e n t o r y . s t o c k _ p r o d u c t s ( i d )   o n   d e l e t e   r e s t r i c t ,  
+     s y s t e m _ q u a n t i t y   n u m e r i c ( 1 4 , 4 )   n o t   n u l l ,  
+     a c t u a l _ q u a n t i t y   n u m e r i c ( 1 4 , 4 )   n o t   n u l l ,  
+     v a r i a n c e _ q u a n t i t y   n u m e r i c ( 1 4 , 4 )   n o t   n u l l ,  
+     u n i t   t e x t   n o t   n u l l ,  
+     c r e a t e d _ a t   t i m e s t a m p t z   n o t   n u l l   d e f a u l t   n o w ( )  
+ ) ;  
+ 
