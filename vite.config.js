@@ -23,6 +23,7 @@ import { handleProductSalesPlanRequest } from "./backend/domains/inventory/http/
 import { handleProductOrderRequest } from "./backend/domains/inventory/http/productOrderRoute.mjs";
 import { handleStockCheckRequest } from "./backend/domains/inventory/http/stockCheckRoute.mjs";
 import { handleDashboardOverviewRequest } from "./backend/domains/dashboard/http/dashboardRoute.mjs";
+import { handleTablesRequest } from "./backend/domains/sales/http/tablesRoute.mjs";
 
 try {
   process.loadEnvFile?.("backend/.env");
@@ -62,6 +63,7 @@ const inventoryApiPlugin = {
       const isStockInboundRoute = requestUrl.startsWith("/api/inventory/stock-inbounds");
       const isStockCheckRoute = requestUrl.startsWith("/api/inventory/stock-checks");
       const isDashboardRoute = requestUrl.startsWith("/api/dashboard");
+      const isTablesRoute = requestUrl.startsWith("/api/sales/tables");
 
       if (
         !isPortioningRoute &&
@@ -77,7 +79,8 @@ const inventoryApiPlugin = {
         !isStockBalanceRoute &&
         !isStockInboundRoute &&
         !isStockCheckRoute &&
-        !isDashboardRoute
+        !isDashboardRoute &&
+        !isTablesRoute
       ) {
         next();
         return;
@@ -145,10 +148,16 @@ const inventoryApiPlugin = {
             method: req.method,
             requestUrl,
           });
-        } else {
+        } else if (isDashboardRoute) {
           result = await handleDashboardOverviewRequest({
             method: req.method,
             requestUrl,
+          });
+        } else {
+          result = await handleTablesRequest({
+            method: req.method,
+            requestUrl,
+            body,
           });
         }
 

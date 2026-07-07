@@ -6,6 +6,7 @@ import { OrdersView } from "./features/orders/OrdersView";
 import { ProductsView } from "./features/products/ProductsView";
 import { ProductsPortioningView } from "./features/products/ProductsPortioningView";
 import { SuppliersView } from "./features/suppliers/SuppliersView";
+import { TablesView } from "./features/tables/TablesView";
 import { AppShell } from "./shared/layout/AppShell";
 
 const tabs = [
@@ -38,10 +39,21 @@ const tabs = [
     ],
   },
   {
-    id: "orders",
-    label: "Đơn hàng",
-    eyebrow: "Bán hàng",
-    description: "Tổng hợp đơn bán theo ngày, loại đơn và lợi nhuận.",
+    id: "sales-root",
+    label: "Bán hàng",
+    eyebrow: "Giao dịch",
+    children: [
+      {
+        id: "tables",
+        label: "Bàn phục vụ",
+        description: "Quản lý danh sách bàn, gọi món và tạo bill quét QR.",
+      },
+      {
+        id: "orders",
+        label: "Hóa đơn",
+        description: "Tổng hợp các hóa đơn khách hàng đã thanh toán.",
+      },
+    ],
   },
   {
     id: "suppliers",
@@ -61,6 +73,7 @@ const featureViews = {
   "products-management": ProductsView,
   "products-portioning": ProductsPortioningView,
   orders: OrdersView,
+  tables: TablesView,
   suppliers: SuppliersView,
   debts: DebtsView,
 };

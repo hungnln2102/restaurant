@@ -22,6 +22,7 @@ import { handleMenuProductRequest } from "../backend/domains/inventory/http/menu
 import { handleProductSalesPlanRequest } from "../backend/domains/inventory/http/productSalesPlanRoute.mjs";
 import { handleProductOrderRequest } from "../backend/domains/inventory/http/productOrderRoute.mjs";
 import { handleDashboardOverviewRequest } from "../backend/domains/dashboard/http/dashboardRoute.mjs";
+import { handleTablesRequest } from "../backend/domains/sales/http/tablesRoute.mjs";
 
 function isJsonBodyMethod(method) {
   return method === "POST" || method === "PUT" || method === "PATCH";
@@ -121,6 +122,7 @@ function detectRoute(requestUrl) {
   if (requestUrl.startsWith("/api/inventory/stock-balances")) return "stockBalance";
   if (requestUrl.startsWith("/api/inventory/stock-inbounds")) return "stockInbound";
   if (requestUrl.startsWith("/api/dashboard")) return "dashboard";
+  if (requestUrl.startsWith("/api/sales/tables")) return "tables";
   return null;
 }
 
@@ -137,7 +139,7 @@ async function dispatch(route, { method, requestUrl, body }) {
     case "stockLot":
       return handleStockLotRequest({ method, requestUrl });
     case "stockProduct":
-      return handleStockProductRequest({ method });
+      return handleStockProductRequest({ method, body });
     case "menuProduct":
       return handleMenuProductRequest({ method, requestUrl, body });
     case "productPortioning":
@@ -152,6 +154,8 @@ async function dispatch(route, { method, requestUrl, body }) {
       return handleStockInboundRequest({ method, requestUrl, body });
     case "dashboard":
       return handleDashboardOverviewRequest({ method, requestUrl });
+    case "tables":
+      return handleTablesRequest({ method, requestUrl, body });
     default:
       return {
         status: 404,
