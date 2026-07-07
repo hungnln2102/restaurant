@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { getTables, createTable, createSession, getTableOrders, checkoutSession } from "./api/tablesApi";
 import { TableDetailModal } from "./components/TableDetailModal";
+import { CreateTableModal } from "./components/CreateTableModal";
 import "./tables.css";
 
 export function TablesView() {
@@ -8,6 +9,7 @@ export function TablesView() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedTable, setSelectedTable] = useState(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const fetchTables = async () => {
     setIsLoading(true);
@@ -26,15 +28,8 @@ export function TablesView() {
     fetchTables();
   }, []);
 
-  const handleAddTable = async () => {
-    const tableName = window.prompt("Nhập tên bàn mới:");
-    if (!tableName) return;
-    try {
-      await createTable(tableName);
-      fetchTables();
-    } catch (err) {
-      alert(err.message);
-    }
+  const handleAddTable = () => {
+    setIsCreateModalOpen(true);
   };
 
   const getStatusColor = (status) => {
@@ -126,6 +121,13 @@ export function TablesView() {
           onUpdated={() => {
             fetchTables();
           }}
+        />
+      )}
+
+      {isCreateModalOpen && (
+        <CreateTableModal
+          onClose={() => setIsCreateModalOpen(false)}
+          onCreated={() => fetchTables()}
         />
       )}
     </div>
