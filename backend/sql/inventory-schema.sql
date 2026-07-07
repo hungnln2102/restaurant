@@ -103,9 +103,9 @@ create table if not exists inventory.menu_products (
   id bigserial primary key,
   product_name text not null unique,
   product_category text,
-  serving_unit text not null default 'phần',
+  serving_unit text not null default 'pháº§n',
   selling_price numeric(14,4) not null default 0 check (selling_price >= 0),
-  status text not null default 'Đang bán',
+  status text not null default 'Äang bÃ¡n',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -306,7 +306,7 @@ create index if not exists idx_stock_inbounds_created_at_desc
 create index if not exists idx_supplier_products_stock_pref_updated
   on inventory.supplier_products (stock_product_id, is_preferred desc, updated_at desc);
 
--- Supports the inventory overview "Lịch sử nhập theo ngày" timeline query
+-- Supports the inventory overview "Lá»ch sá»­ nháº­p theo ngÃ y" timeline query
 -- which falls back to supplier_products by (supplier_id, stock_product_id)
 -- when an inbound row has no unit_price snapshot. Composite leading on
 -- supplier_id matches the equality predicates in the LATERAL join.
@@ -357,7 +357,7 @@ comment on column inventory.menu_product_components.stock_product_id is 'Foreign
 comment on table inventory.product_orders is 'Sales orders captured per menu product, used to display order history and compute realized revenue/profit.';
 comment on column inventory.product_orders.order_code is 'Human-friendly unique order code generated at insert time, e.g. ORD-YYYYMMDD-XXXX.';
 comment on column inventory.product_orders.menu_product_id is 'Foreign key referencing inventory.menu_products.id; cascade delete with the menu product.';
-comment on column inventory.product_orders.order_type is 'Order channel: dine_in (Ăn tại quán) or takeaway (Mua mang về).';
+comment on column inventory.product_orders.order_type is 'Order channel: dine_in (Än táº¡i quÃ¡n) or takeaway (Mua mang vá»).';
 comment on column inventory.product_orders.quantity is 'Number of units sold in this order; must be greater than zero.';
 comment on column inventory.product_orders.unit_price is 'Selling price per unit at the time the order was captured.';
 comment on column inventory.product_orders.total_amount is 'Total revenue for the order (unit_price * quantity).';
@@ -365,23 +365,22 @@ comment on column inventory.product_orders.cost_amount is 'Total cost of goods s
 comment on column inventory.product_orders.profit_amount is 'Profit for the order (total_amount - cost_amount).';
 comment on column inventory.product_orders.currency_code is 'Currency code stored as ISO-like text (default VND).';
 comment on column inventory.product_orders.ordered_at is 'Wall-clock time when the order was placed; used for ordering and reporting.';
-c r e a t e   t a b l e   i f   n o t   e x i s t s   i n v e n t o r y . s t o c k _ c h e c k s   (  
-     i d   b i g s e r i a l   p r i m a r y   k e y ,  
-     c h e c k _ c o d e   t e x t   n o t   n u l l   u n i q u e ,  
-     s t a t u s   t e x t   n o t   n u l l   d e f a u l t   ' p e n d i n g ' ,  
-     n o t e s   t e x t ,  
-     c r e a t e d _ a t   t i m e s t a m p t z   n o t   n u l l   d e f a u l t   n o w ( ) ,  
-     u p d a t e d _ a t   t i m e s t a m p t z   n o t   n u l l   d e f a u l t   n o w ( )  
- ) ;  
-  
- c r e a t e   t a b l e   i f   n o t   e x i s t s   i n v e n t o r y . s t o c k _ c h e c k _ i t e m s   (  
-     i d   b i g s e r i a l   p r i m a r y   k e y ,  
-     c h e c k _ i d   b i g i n t   n o t   n u l l   r e f e r e n c e s   i n v e n t o r y . s t o c k _ c h e c k s ( i d )   o n   d e l e t e   c a s c a d e ,  
-     s t o c k _ p r o d u c t _ i d   b i g i n t   n o t   n u l l   r e f e r e n c e s   i n v e n t o r y . s t o c k _ p r o d u c t s ( i d )   o n   d e l e t e   r e s t r i c t ,  
-     s y s t e m _ q u a n t i t y   n u m e r i c ( 1 4 , 4 )   n o t   n u l l ,  
-     a c t u a l _ q u a n t i t y   n u m e r i c ( 1 4 , 4 )   n o t   n u l l ,  
-     v a r i a n c e _ q u a n t i t y   n u m e r i c ( 1 4 , 4 )   n o t   n u l l ,  
-     u n i t   t e x t   n o t   n u l l ,  
-     c r e a t e d _ a t   t i m e s t a m p t z   n o t   n u l l   d e f a u l t   n o w ( )  
- ) ;  
- 
+create table if not exists inventory.stock_checks (
+  id bigserial primary key,
+  check_code text not null unique,
+  status text not null default 'pending',
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists inventory.stock_check_items (
+  id bigserial primary key,
+  check_id bigint not null references inventory.stock_checks(id) on delete cascade,
+  stock_product_id bigint not null references inventory.stock_products(id) on delete restrict,
+  system_quantity numeric(14,4) not null,
+  actual_quantity numeric(14,4) not null,
+  variance_quantity numeric(14,4) not null,
+  unit text not null,
+  created_at timestamptz not null default now()
+);
